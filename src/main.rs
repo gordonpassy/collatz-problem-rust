@@ -12,7 +12,7 @@ fn main() {
     let mut handles = vec![];
 
     for i in 1..=8 {
-        let base: u64               = 1_000;
+        let base: u64               = 130_000_000;
         let to:u64                  = base * i;
         let from:u64                = if i==1 { 1 } else { ((i-1)*base)+1 };
         let handle: JoinHandle<()>  = thread::spawn(move || {
