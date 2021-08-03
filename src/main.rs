@@ -7,7 +7,7 @@ use std::fmt::format;
 use std::thread::JoinHandle;
 
 fn main() {
-    println!("Cores: {}", num_cpus::get());
+    println!("CPU Cores: {}", num_cpus::get());
     let now = SystemTime::now();
     let mut handles = vec![];
 
