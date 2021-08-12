@@ -1,32 +1,37 @@
-use std::time::{Duration, SystemTime};
+use std::time::{SystemTime};
 use std::{thread, fs};
-use std::string;
 use num_format::{ToFormattedString, Locale};
 use std::io::Write;
-use std::fmt::format;
-use std::thread::JoinHandle;
 
 fn main() {
     println!("CPU Cores: {}", num_cpus::get());
     let now = SystemTime::now();
     let mut handles = vec![];
 
-    for i in 1..=8 {
-        let base: u64               = 130_000_000;
-        let to:u64                  = base * i;
-        let from:u64                = if i==1 { 1 } else { ((i-1)*base)+1 };
-        let handle: JoinHandle<()>  = thread::spawn(move || {
-            run(from, to);
+    let threads:i64 = num_cpus::get() as i64;
+    let from:i64    = 1i64;
+    let to:i64      = 100_000i64;
+    let base:i64    = to/threads;
+
+    for i in 1..=threads {
+        let from:i64 = match i {
+            1 => from,
+            _ => if base > from { ((i-1)*base)+1 } else { ((i-1)*base)+from+1 }
+        };
+        let to:i64 = if base > from { base * i } else { (base*1)+from };
+        let handle  = thread::spawn(move ||{
+            run(from, to)
         });
         handles.push(handle)
     }
-    for handle in handles {
+
+    for handle in  handles{
         handle.join().unwrap();
     }
     match now.elapsed() {
         Ok(elapsed) => {
             let millis = elapsed.as_millis();
-            write_to_file(convert_time(millis).as_str())
+            write_to_log(convert_time(millis).as_str())
         }
         Err(e)=> {
             println!("Error: {:?}", e);
@@ -34,44 +39,33 @@ fn main() {
     }
 }
 
-fn run(from: u64, to: u64) {
-    let thread_start = SystemTime::now();
+fn run(from: i64, to: i64) {
+    let filename = format!("{}-{}.log",from.to_formatted_string(&Locale::en), to.to_formatted_string(&Locale::en));
+    create_file(&filename);
     for i in from..=to {
-        println!("{}",i.to_formatted_string(&Locale::en));
-        test(i);
-    }
-    match thread_start.elapsed() {
-        Ok(elapsed) => {
-            let millis = elapsed.as_millis();
-            let log_entry = format!("{}-{} Duration: {}\n",
-                                    from.to_formatted_string(&Locale::en),
-                                    to.to_formatted_string(&Locale::en),
-                                    convert_time(millis));
-            write_to_file(log_entry.as_str())
-        }
-        Err(e)=> {
-            println!("Error: {:?}", e);
-        }
+        let number = i.to_formatted_string(&Locale::en);
+        println!("{}",&number);
+        let factors = test(i);
+        let log_data = format!("{}:{:?}", number, &factors);
+        write_to_file(&log_data, &filename)
     }
 }
 
-fn test(n: u64)-> u64 {
+fn test(n: i64)-> Vec<i64> {
+    let mut factors: Vec<i64> = Vec::new();
+    factors.push(n);
     let mut temp = n;
     loop {
-        if temp == 1 {
-            break temp
+        temp = if temp == 1 { temp } else if temp%2 == 0 { temp/2 } else { (temp*3)+1 };
+        if temp ==1 {
+            factors.push(temp);
+            break;
         } else {
-            temp = collatz_func(temp)
+            factors.push(temp);
         }
     }
-}
 
-fn collatz_func(number: u64) -> u64 {
-    if number%2 == 0 {
-        number/2
-    } else {
-        (number*3)+1
-    }
+    factors
 }
 
 fn convert_time(duration: u128) -> String {
@@ -87,15 +81,33 @@ fn convert_time(duration: u128) -> String {
     }else if hours == 0 {
         format!("{}m:{}s:{}ms", minutes, seconds, millis)
     } else {
-        format!("{}h:${}m:{}s:{}ms", hours, minutes, seconds, millis)
+        format!("{}h:{}m:{}s:{}ms", hours, minutes, seconds, millis)
     }
 }
 
-fn write_to_file(data: &str) {
+fn create_file(filename: &str) {
+    fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create_new(true)
+        .open(filename)
+        .unwrap();
+}
+
+fn write_to_file(data: &str, filename: &str) {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(filename)
+        .unwrap();
+    write!(file, "{}\n", data).unwrap();
+}
+
+fn write_to_log(data: &str) {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
         .open("time.log")
         .unwrap();
-    write!(file, "{}", data);
+    write!(file, "{}", data).unwrap();
 }
