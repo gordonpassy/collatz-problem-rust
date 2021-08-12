@@ -10,7 +10,7 @@ fn main() {
 
     let threads:i64 = num_cpus::get() as i64;
     let from:i64    = 1i64;
-    let to:i64      = 100_000i64;
+    let to:i64      = 1_000_000_000i64;
     let base:i64    = to/threads;
 
     for i in 1..=threads {
