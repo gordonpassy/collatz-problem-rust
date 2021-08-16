@@ -4,7 +4,6 @@ use num_format::{ToFormattedString, Locale};
 use std::io::Write;
 
 fn main() {
-    println!("CPU Cores: {}", num_cpus::get());
     let now = SystemTime::now();
     let mut handles = vec![];
 
